@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taman Keuangan Keluarga</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #7ec8f7 0%, #b8e4fb 45%, #d8f3e3 70%, #a8e6a3 100%);
+    color: #2d4a3e;
+    padding: 20px 16px 120px;
+    max-width: 480px;
+    margin: 0 auto;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  .matahari {
+    position: fixed; top: 30px; right: 30px; width: 70px; height: 70px;
+    background: radial-gradient(circle, #ffe97a, #ffd23f);
+    border-radius: 50%; z-index: 0;
+    box-shadow: 0 0 50px rgba(255,210,63,.8);
+    animation: matahariNapas 4s ease-in-out infinite;
+  }
+  @keyframes matahariNapas { 0%,100% { box-shadow: 0 0 40px rgba(255,210,63,.7); } 50% { box-shadow: 0 0 70px rgba(255,210,63,.95); } }
+  .awan { position: fixed; z-index: 0; opacity: .85; animation: awanJalan linear infinite; width: 90px; height: 30px; background: #fff; border-radius: 30px; }
+  .awan::before, .awan::after { content: ''; position: absolute; background: #fff; border-radius: 50%; }
+  .awan::before { width: 44px; height: 44px; top: -22px; left: 14px; }
+  .awan::after { width: 32px; height: 32px; top: -14px; left: 48px; }
+  @keyframes awanJalan { from { transform: translateX(-140px); } to { transform: translateX(110vw); } }
+  .kupu { position: fixed; font-size: 22px; z-index: 0; pointer-events: none; animation: terbang 14s ease-in-out infinite; }
+  @keyframes terbang {
+    0%   { transform: translate(0,0) rotate(0deg); }
+    20%  { transform: translate(60px,-40px) rotate(10deg); }
+    40%  { transform: translate(-30px,-80px) rotate(-8deg); }
+    60%  { transform: translate(50px,-30px) rotate(6deg); }
+    80%  { transform: translate(-40px,-60px) rotate(-5deg); }
+    100% { transform: translate(0,0) rotate(0deg); }
+  }
+  .taman { position: fixed; bottom: 0; left: 0; right: 0; height: 70px; z-index: 0; pointer-events: none; }
+  .rumput {
+    position: absolute; bottom: 0; width: 14px; height: 34px;
+    background: linear-gradient(180deg, #5cb85c, #3d8b3d);
+    border-radius: 50% 50% 0 0; transform-origin: bottom;
+    animation: goyangRumput 2.6s ease-in-out infinite;
+  }
+  @keyframes goyangRumput { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(7deg); } }
+  .bunga { position: absolute; bottom: 18px; font-size: 22px; transform-origin: bottom; animation: goyangBunga 3s ease-in-out infinite; }
+  @keyframes goyangBunga { 0%,100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+
+  header { position: relative; z-index: 1; margin-bottom: 18px; animation: turun .6s ease both; }
+  header h1 { font-size: 19px; font-weight: 700; color: #2f6b3c; text-shadow: 0 1px 0 rgba(255,255,255,.6); }
+  header p { font-size: 13px; color: #5a8a66; }
+
+  .kartu {
+    position: relative; z-index: 1;
+    background: rgba(255,255,255,0.72);
+    border: 1px solid rgba(255,255,255,0.9);
+    border-radius: 22px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 6px 24px rgba(46,110,70,.15);
+    padding: 18px; margin-bottom: 14px;
+    animation: muncul .6s ease both;
+  }
+  .kartu:nth-of-type(2) { animation-delay: .1s; }
+  .kartu:nth-of-type(3) { animation-delay: .2s; }
+  @keyframes muncul { from { opacity: 0; transform: translateY(24px) scale(.97); } to { opacity: 1; transform: none; } }
+  @keyframes turun { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
+
+  .saldo-label { font-size: 12px; color: #5a8a66; letter-spacing: .5px; text-transform: uppercase; font-weight: 600; }
+  .saldo { font-size: 34px; font-weight: 800; margin-top: 4px; }
+  .saldo.positif { color: #2e7d32; text-shadow: 0 1px 0 rgba(255,255,255,.7); }
+  .saldo.negatif { color: #c62828; text-shadow: 0 1px 0 rgba(255,255,255,.7); }
+  .saldo.pop { animation: pop .5s ease; }
+  @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.15); } 100% { transform: scale(1); } }
+
+  .ringkas { display: flex; gap: 10px; margin-top: 14px; }
+  .ringkas > div { flex: 1; background: rgba(255,255,255,.7); border-radius: 16px; padding: 10px 12px; }
+  .ringkas .label { font-size: 11px; color: #5a8a66; }
+  .masuk { color: #2e7d32; font-weight: 700; font-size: 15px; margin-top: 2px; }
+  .keluar { color: #c62828; font-weight: 700; font-size: 15px; margin-top: 2px; }
+
+  .tab { display: flex; gap: 6px; background: rgba(120,180,130,.25); border-radius: 14px; padding: 4px; margin-bottom: 14px; }
+  .tab button {
+    flex: 1; padding: 9px; border: none; border-radius: 11px; background: transparent;
+    color: #4a7a58; font-size: 14px; font-weight: 700; cursor: pointer;
+    transition: all .25s cubic-bezier(.34,1.56,.64,1);
+  }
+  .tab button.aktif { background: #4caf50; color: #fff; box-shadow: 0 3px 14px rgba(76,175,80,.45); transform: scale(1.03); }
+
+  form { display: flex; flex-direction: column; gap: 10px; }
+  input, select {
+    padding: 12px 14px; border-radius: 14px; font-size: 15px; width: 100%;
+    background: rgba(255,255,255,.85); border: 1.5px solid #cde5d2;
+    color: #2d4a3e; outline: none; transition: border .2s, box-shadow .2s;
+  }
+  input:focus, select:focus { border-color: #4caf50; box-shadow: 0 0 0 4px rgba(76,175,80,.15); }
+  input::placeholder { color: #9bbfa6; }
+  .baris { display: flex; gap: 10px; }
+  .baris > div { flex: 1; }
+
+  .btn-utama {
+    padding: 13px; border: none; border-radius: 14px; cursor: pointer;
+    background: linear-gradient(135deg, #66bb6a, #43a047);
+    color: #fff; font-size: 15px; font-weight: 700;
+    box-shadow: 0 5px 18px rgba(76,175,80,.4);
+    transition: transform .15s cubic-bezier(.34,1.56,.64,1);
+    animation: denyut 2.5s ease-in-out infinite;
+  }
+  @keyframes denyut { 0%,100% { box-shadow: 0 5px 18px rgba(76,175,80,.4); } 50% { box-shadow: 0 5px 28px rgba(102,187,106,.6); } }
+  .btn-utama:active { transform: scale(.93); }
+  .btn-utama.sukses { background: linear-gradient(135deg, #ffca28, #ffa000); animation: goyang .5s ease; }
+  @keyframes goyang { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-3deg) scale(1.05); } 75% { transform: rotate(3deg) scale(1.05); } }
+
+  .btn-struk {
+    padding: 12px; border: none; border-radius: 14px; cursor: pointer; width: 100%;
+    background: rgba(255,255,255,.7); border: 2px dashed #8bc34a;
+    color: #558b2f; font-size: 14.5px; font-weight: 700; transition: transform .15s;
+  }
+  .btn-struk:active { transform: scale(.96); }
+  .btn-galeri {
+    margin-top: 8px; padding: 10px; border: none; border-radius: 14px; cursor: pointer; width: 100%;
+    background: rgba(255,255,255,.5); color: #5a8a66; font-size: 13.5px; font-weight: 600;
+  }
+
+  .filter { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .filter button {
+    padding: 7px 13px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+    background: rgba(255,255,255,.7); color: #4a7a58;
+    border: 1.5px solid transparent; border-radius: 20px; transition: all .25s cubic-bezier(.34,1.56,.64,1);
+  }
+  .filter button.aktif { background: #4caf50; color: #fff; border-color: #4caf50; transform: scale(1.08); }
+
+  .judul-daftar { font-size: 13px; font-weight: 700; color: #5a8a66; margin-bottom: 8px; }
+  ul { list-style: none; }
+  li { display: flex; justify-content: space-between; align-items: center; padding: 11px 4px; border-bottom: 1px dashed #cde5d2; animation: slideMasuk .4s ease both; }
+  li:last-child { border-bottom: none; }
+  @keyframes slideMasuk { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+  .info b { font-size: 14.5px; font-weight: 700; color: #2d4a3e; }
+  .info small { color: #7aa389; display: block; font-size: 12px; margin-top: 1px; }
+  .aksi { display: flex; align-items: center; gap: 6px; }
+  .nilai { font-weight: 700; font-size: 14px; }
+  .hapus { background: none; border: none; color: #a5c9b0; font-size: 17px; cursor: pointer; padding: 4px 6px; transition: transform .2s, color .2s; }
+  .hapus:active { transform: scale(1.5) rotate(20deg); color: #c62828; }
+  .kosong { text-align: center; color: #7aa389; padding: 24px 0; font-size: 14px; }
+  .kosong .maskot { font-size: 40px; display: block; animation: goyangLembut 2s ease-in-out infinite; }
+  @keyframes goyangLembut { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+
+  .modal {
+    display: none; position: fixed; inset: 0; z-index: 50;
+    background: rgba(20,50,30,.45); backdrop-filter: blur(6px);
+    align-items: flex-end; justify-content: center;
+  }
+  .modal.buka { display: flex; }
+  .modal-isi {
+    background: #f4fbf5; border-radius: 24px 24px 0 0; width: 100%; max-width: 480px;
+    max-height: 94vh; overflow-y: auto; padding: 20px 16px 28px;
+    animation: naik .35s cubic-bezier(.34,1.4,.64,1) both;
+  }
+  @keyframes naik { from { transform: translateY(100%); } to { transform: none; } }
+  .modal-judul { font-size: 16px; font-weight: 800; color: #2f6b3c; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .tutup { background: none; border: none; color: #5a8a66; font-size: 22px; cursor: pointer; }
+
+  #video { width: 100%; border-radius: 16px; background: #123; display: none; max-height: 55vh; object-fit: cover; }
+  .bingkai { position: relative; }
+  .bingkai::after {
+    content: ''; position: absolute; inset: 8% 6%;
+    border: 2px dashed rgba(255,255,255,.85); border-radius: 12px; pointer-events: none;
+  }
+  .btn-jepret {
+    border: none; border-radius: 50%; cursor: pointer;
+    width: 68px; height: 68px; margin: 12px auto 0; display: block;
+    background: radial-gradient(circle at 30% 30%, #aed581, #558b2f);
+    border: 4px solid #fff;
+    box-shadow: 0 0 24px rgba(85,139,47,.55);
+    transition: transform .12s;
+  }
+  .btn-jepret:active { transform: scale(.85); }
+  .petunjuk-kamera { text-align: center; color: #5a8a66; font-size: 13px; margin-top: 8px; }
+
+  #fotoPreview { width: 100%; border-radius: 16px; margin-bottom: 12px; display: none; }
+  .proses { text-align: center; color: #5a8a66; font-size: 14px; padding: 14px 0; display: none; }
+  .spinner {
+    width: 34px; height: 34px; margin: 0 auto 10px;
+    border: 3px solid rgba(76,175,80,.2); border-top-color: #4caf50;
+    border-radius: 50%; animation: putar .8s linear infinite;
+  }
+  @keyframes putar { to { transform: rotate(360deg); } }
+  .item-struk {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,.8); border-radius: 14px;
+    padding: 10px 12px; margin-bottom: 8px; animation: slideMasuk .35s ease both;
+  }
+  .item-struk input[type="checkbox"] { width: 19px; height: 19px; accent-color: #4caf50; flex-shrink: 0; }
+  .item-struk .nama { flex: 1; font-size: 14px; text-transform: capitalize; color: #2d4a3e; }
+  .item-struk .harga { font-weight: 700; color: #c62828; font-size: 13.5px; white-space: nowrap; }
+  .scan-kosong { text-align: center; color: #7aa389; font-size: 13.5px; padding: 10px 0 4px; line-height: 1.6; }
+  .ringkas-scan {
+    display: flex; justify-content: space-between; align-items: center;
+    background: rgba(76,175,80,.12); border: 1.5px solid rgba(76,175,80,.35);
+    border-radius: 14px; padding: 12px 14px; margin: 12px 0;
+  }
+  .ringkas-scan .label { font-size: 12px; color: #5a8a66; }
+  .ringkas-scan .total { font-size: 17px; font-weight: 800; color: #2e7d32; }
+  .error-box {
+    background: rgba(198,40,40,.08); border: 1.5px solid rgba(198,40,40,.35);
+    border-radius: 14px; padding: 12px 14px; color: #b03a3a; font-size: 13.5px; line-height: 1.6;
+  }
+  .teks-mentah { font-size: 11px; background: rgba(255,255,255,.6); border-radius: 10px; padding: 10px; white-space: pre-wrap; color: #2d4a3e; margin-top: 6px; }
+  .konfeti { position: fixed; top: -12px; font-size: 20px; z-index: 99; pointer-events: none; animation: jatuh linear forwards; }
+  @keyframes jatuh { to { transform: translateY(105vh) rotate(720deg); opacity: .2; } }
+</style>
+</head>
+<body>
+
+<div class="matahari"></div>
+<div class="awan" style="top:60px;  animation-duration:45s;"></div>
+<div class="awan" style="top:130px; animation-duration:65s; animation-delay:-20s; transform:scale(.7);"></div>
+<div class="kupu" style="top:180px; left:12%;">🦋</div>
+<div class="kupu" style="top:340px; right:10%; animation-delay:-5s; animation-duration:17s;">🦋</div>
+<div class="kupu" style="top:520px; left:20%; animation-delay:-9s; animation-duration:20s;">🐝</div>
+
+<div class="taman" id="taman"></div>
+
+<header>
+  <h1>🌸 Taman Keuangan Keluarga</h1>
+  <p id="tanggalHariIni"></p>
+</header>
+
+<div class="kartu">
+  <div class="saldo-label">Saldo</div>
+  <div class="saldo" id="saldo">Rp 0</div>
+  <div class="ringkas">
+    <div><div class="label">Masuk 🌱</div><div class="masuk" id="totMasuk">Rp 0</div></div>
+    <div><div class="label">Keluar 🍂</div><div class="keluar" id="totKeluar">Rp 0</div></div>
+  </div>
+</div>
+
+<div class="kartu">
+  <button class="btn-struk" onclick="bukaScan()">📸 Jepret Struk Belanja, Baca Otomatis</button>
+  <button class="btn-galeri" onclick="document.getElementById('inputGaleri').click()">🖼️ Pilih dari Galeri</button>
+  <div style="height:14px"></div>
+  <div class="tab">
+    <button type="button" id="tabKeluar" class="aktif" onclick="gantiTab('keluar')">Pengeluaran</button>
+    <button type="button" id="tabMasuk" onclick="gantiTab('masuk')">Pemasukan</button>
+  </div>
+  <form id="form" onsubmit="tambah(event)">
+    <input type="number" id="jumlah" placeholder="Jumlah (Rp)" min="0" step="any" required>
+    <div class="baris">
+      <select id="kategori"></select>
+      <input type="date" id="tanggal" required>
+    </div>
+    <input type="text" id="ket" placeholder="Catatan (opsional)">
+    <button type="submit" class="btn-utama" id="btnSimpan">Simpan Pengeluaran 🌼</button>
+  </form>
+</div>
+
+<div class="kartu">
+  <div class="filter">
+    <button class="aktif" onclick="gantiFilter('semua', this)">Semua</button>
+    <button onclick="gantiFilter('bulan', this)">Bulan ini</button>
+    <button onclick="gantiFilter('anak', this)">Anak 👶</button>
+  </div>
+  <div class="judul-daftar">Riwayat</div>
+  <ul id="daftar"></ul>
+</div>
+
+<div class="modal" id="modalScan">
+  <div class="modal-isi">
+    <div class="modal-judul">📸 Scan Struk <button class="tutup" onclick="tutupScan()">×</button></div>
+    <div id="areaKamera">
+      <div class="bingkai"><video id="video" autoplay playsinline muted></video></div>
+      <button class="btn-jepret" onclick="jepret()" aria-label="Jepret"></button>
+      <div class="petunjuk-kamera">Pastikan struk terlihat penuh, tegak, dan cahaya cukup. Lalu tekan tombol bulat.</div>
+    </div>
+    <img id="fotoPreview" alt="struk">
+    <div class="proses" id="proses">
+      <div class="spinner"></div>
+      <div id="prosesTeks">Membaca struk...</div>
+    </div>
+    <div id="areaHasil"></div>
+  </div>
+</div>
+
+<input type="file" id="inputGaleri" accept="image/*" style="display:none" onchange="dariGaleri(this)">
+
+<script>
+const KATEGORI_KELUAR = ['Kebutuhan Anak','Susu','Diaper','Makan & Minum','Kesehatan','Tagihan','Transport','Lainnya'];
+const KATEGORI_MASUK = ['Gaji','Bonus','Usaha','Lainnya'];
+const EMOJI_KONFETI = ['🌸','🌼','🌻','🦋','🍃','💚','🌱','✨'];
+
+let tab = 'keluar', filter = 'semua';
+let data = JSON.parse(localStorage.getItem('keuanganKeluarga') || '[]');
+let itemsStruk = [];
+let stream = null;
+
+function simpan() { localStorage.setItem('keuanganKeluarga', JSON.stringify(data)); }
+
+const HARI = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const d = new Date();
+document.getElementById('tanggalHariIni').textContent =
+  `${HARI[d.getDay()]}, ${d.getDate()} ${BULAN[d.getMonth()]} ${d.getFullYear()}`;
+
+(function buatTaman() {
+  const taman = document.getElementById('taman');
+  const BUNGA = ['🌷','🌼','🌻','🌸','🌺'];
+  for (let i = 0; i < 30; i++) {
+    const r = document.createElement('div');
+    r.className = 'rumput';
+    r.style.left = (i * 3.4 + Math.random() * 2) + 'vw';
+    r.style.animationDelay = (Math.random() * 2) + 's';
+    r.style.height = (24 + Math.random() * 16) + 'px';
+    taman.appendChild(r);
+  }
+  for (let i = 0; i < 7; i++) {
+    const b = document.createElement('div');
+    b.className = 'bunga';
+    b.textContent = BUNGA[i % BUNGA.length];
+    b.style.left = (5 + i * 14 + Math.random() * 5) + 'vw';
+    b.style.animationDelay = (Math.random() * 2) + 's';
+    taman.appendChild(b);
+  }
+})();
+
+function gantiTab(t) {
+  tab = t;
+  document.getElementById('tabKeluar').classList.toggle('aktif', t === 'keluar');
+  document.getElementById('tabMasuk').classList.toggle('aktif', t === 'masuk');
+  document.getElementById('btnSimpan').textContent = 'Simpan ' + (t === 'keluar' ? 'Pengeluaran' : 'Pemasukan') + ' 🌼';
+  document.getElementById('kategori').innerHTML =
+    (t === 'keluar' ? KATEGORI_KELUAR : KATEGORI_MASUK).map(k => `<option>${k}</option>`).join('');
+}
+
+function gantiFilter(f, btn) {
+  filter = f;
+  document.querySelectorAll('.filter button').forEach(b => b.classList.remove('aktif'));
+  btn.classList.add('aktif');
+  render();
+}
+
+function konfeti() {
+  for (let i = 0; i < 18; i++) {
+    const k = document.createElement('div');
+    k.className = 'konfeti';
+    k.textContent = EMOJI_KONFETI[Math.floor(Math.random() * EMOJI_KONFETI.length)];
+    k.style.left = Math.random() * 100 + 'vw';
+    k.style.animationDuration = (1.6 + Math.random() * 1.4) + 's';
+    k.style.animationDelay = Math.random() * .3 + 's';
+    document.body.appendChild(k);
+    setTimeout(() => k.remove(), 3500);
+  }
+}
+
+/* ============ KAMERA LIVE ============ */
+async function bukaScan() {
+  document.getElementById('modalScan').classList.add('buka');
+  resetModal();
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false
+    });
+    const video = document.getElementById('video');
+    video.srcObject = stream;
+    video.muted = true;
+    video.style.display = 'block';
+    document.getElementById('areaKamera').style.display = 'block';
+    await video.play();
+  } catch (err) {
+    document.getElementById('areaKamera').style.display = 'block';
+    document.getElementById('areaKamera').innerHTML =
+      `<div class="error-box">Kamera tidak bisa dibuka.<br><br>
+      <b>Cara mengatasi di iPhone:</b><br>
+      1. Buka Settings iPhone → Safari → Camera → pilih Allow.<br>
+      2. Kalau pernah menolak pop-up izin: Settings → Safari → Clear History and Website Data, lalu buka lagi dan izinkan kamera.<br>
+      3. Pastikan membuka di Safari, bukan dari WhatsApp/Instagram.<br><br>
+      Sementara, pakai tombol 🖼️ Pilih dari Galeri, hasil scan sama persis.</div>`;
+  }
+}
+
+function resetModal() {
+  hentikanKamera();
+  document.getElementById('areaKamera').style.display = 'none';
+  document.getElementById('areaHasil').innerHTML = '';
+  document.getElementById('fotoPreview').style.display = 'none';
+  document.getElementById('proses').style.display = 'none';
+}
+
+function hentikanKamera() {
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+}
+
+function tutupScan() {
+  hentikanKamera();
+  document.getElementById('modalScan').classList.remove('buka');
+}
+
+function jepret() {
+  const video = document.getElementById('video');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  hentikanKamera();
+  document.getElementById('areaKamera').style.display = 'none';
+  const img = document.getElementById('fotoPreview');
+  img.src = dataUrl;
+  img.style.display = 'block';
+  prosesOCR(dataUrl);
+}
+
+function dariGaleri(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('modalScan').classList.add('buka');
+    resetModal();
+    const img = document.getElementById('fotoPreview');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    prosesOCR(e.target.result);
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+/* ============ OCR & PARSE ============ */
+async function prosesOCR(dataUrl) {
+  const proses = document.getElementById('proses');
+  const teks = document.getElementById('prosesTeks');
+  proses.style.display = 'block';
+  teks.textContent = 'Membaca struk... (butuh internet, ±10-30 detik)';
+  let teksMentah = '';
+  try {
+    let hasil;
+    try {
+      hasil = await Tesseract.recognize(dataUrl, 'ind');
+      teksMentah = hasil.data.text;
+      if (!teksMentah || teksMentah.trim().length < 10) {
+        hasil = await Tesseract.recognize(dataUrl, 'eng');
+        teksMentah = hasil.data.text;
+      }
+    } catch (e) {
+      hasil = await Tesseract.recognize(dataUrl, 'eng');
+      teksMentah = hasil.data.text;
+    }
+    tampilkanHasil(parseStruk(teksMentah), teksMentah);
+  } catch (err) {
+    proses.style.display = 'none';
+    document.getElementById('areaHasil').innerHTML =
+      '<div class="error-box">Gagal membaca struk. Pastikan internet aktif, atau masukkan manual lewat form.</div>';
+  }
+  proses.style.display = 'none';
+}
+
+function parseStruk(teks) {
+  const items = [];
+  teks.split('\n').forEach(baris => {
+    baris = baris.trim();
+    if (!baris) return;
+    const low = baris.toLowerCase();
+    if (/^(toko|kasir|alamat|telp|tel |tanggal|no\.?|struk|member|point|poin|thank|terima|www|htpp)/.test(low)) return;
+    const m = baris.match(/(?:[\d.,xX*]+\s*)?([\d][\d.,]*)\s*$/);
+    if (!m) return;
+    const bersih = m[1].replace(/\./g, '').replace(/,/g, '');
+    const angka = parseInt(bersih, 10);
+    if (isNaN(angka) || angka < 100) return;
+    let nama = baris.replace(m[0], '').replace(/[\d.,xX*@#=]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (nama.length < 2) return;
+    const isTotal = /total|tunai|kembali|bayar|cash|sub\s*total|ppn|pb1|diskon|voucher|kartu|debit|qris|ovo|gopay|dana|laporan|qty/.test(low);
+    items.push({ nama: nama.slice(0, 40), jumlah: angka, pilih: !isTotal });
+  });
+  return items;
+}
+
+function tebakKategori(teksLow) {
+  if (/(susu|formula|dancow|bebelac|sgm|morinag|nan |lactogen)/.test(teksLow)) return 'Susu';
+  if (/(diaper|popok|huggies|mamy|sweety|pampers|baby joy)/.test(teksLow)) return 'Diaper';
+  if (/(obat|vitamin|paracetamol|salep|betadine|tolak angin)/.test(teksLow)) return 'Kesehatan';
+  if (/(buku|susuan|mainan|baju anak|botol|dot|bubur|gerber|rice cereal)/.test(teksLow)) return 'Kebutuhan Anak';
+  if (/(nasi|ayam|mie|roti|air mineral|aqua|kopi|gula|minyak|telur|beras|sayur|buah|snack|snek)/.test(teksLow)) return 'Makan & Minum';
+  return 'Lainnya';
+}
+
+function tampilkanHasil(items, teksMentah = '') {
+  itemsStruk = items;
+  const area = document.getElementById('areaHasil');
+  const blokBaca = teksMentah
+    ? `<details style="margin-bottom:10px"><summary style="color:#5a8a66;font-size:12.5px;cursor:pointer">Lihat teks mentah hasil bacaan</summary><pre class="teks-mentah">${teksMentah.replace(/</g,'&lt;')}</pre></details>`
+    : '';
+  if (items.length === 0) {
+    area.innerHTML = blokBaca +
+      '<div class="scan-kosong">Tidak ada item terbaca. Coba foto lebih terang dan tegak, atau masukkan manual.</div>' +
+      '<div class="scan-kosong">Kalau teks mentah di atas terlihat berantakan, salin dan kirim ke asisten untuk disesuaikan.</div>';
+    return;
+  }
+  area.innerHTML = `
+    ${blokBaca}
+    <div class="scan-kosong">Centang item yang mau dicatat:</div>
+    <div id="daftarStruk"></div>
+    <div class="ringkas-scan">
+      <div><div class="label">Total dicentang</div><div class="total" id="totalStruk">Rp 0</div></div>
+    </div>
+    <div class="baris" style="margin-bottom:10px">
+      <div><select id="kategoriStruk"></select></div>
+      <div><input type="date" id="tanggalStruk"></div>
+    </div>
+    <button class="btn-utama" onclick="simpanStruk()">Simpan dari Struk 🌼</button>`;
+  document.getElementById('kategoriStruk').innerHTML = KATEGORI_KELUAR.map(k => `<option>${k}</option>`).join('');
+  document.getElementById('tanggalStruk').valueAsDate = new Date();
+  renderStruk();
+}
+
+function renderStruk() {
+  document.getElementById('daftarStruk').innerHTML = itemsStruk.map((it, i) => `
+    <div class="item-struk">
+      <input type="checkbox" ${it.pilih ? 'checked' : ''} onchange="itemsStruk[${i}].pilih=this.checked; hitungStruk()">
+      <div class="nama">${it.nama}</div>
+      <div class="harga">${rp(it.jumlah)}</div>
+    </div>`).join('');
+  hitungStruk();
+}
+
+function hitungStruk() {
+  const total = itemsStruk.filter(x => x.pilih).reduce((a, x) => a + x.jumlah, 0);
+  document.getElementById('totalStruk').textContent = rp(total);
+}
+
+function simpanStruk() {
+  const kategori = document.getElementById('kategoriStruk').value;
+  const tanggal = document.getElementById('tanggalStruk').value;
+  const dipilih = itemsStruk.filter(x => x.pilih);
+  if (dipilih.length === 0) { alert('Centang minimal satu item dulu.'); return; }
+  dipilih.forEach(x => {
+    data.unshift({ jenis: 'keluar', jumlah: x.jumlah, kategori, tanggal, ket: x.nama });
+  });
+  simpan();
+  tutupScan();
+  konfeti();
+  render();
+}
+
+function tambah(e) {
+  e.preventDefault();
+  data.unshift({
+    jenis: tab,
+    jumlah: +document.getElementById('jumlah').value,
+    kategori: document.getElementById('kategori').value,
+    tanggal: document.getElementById('tanggal').value,
+    ket: document.getElementById('ket').value
+  });
+  simpan();
+  document.getElementById('form').reset();
+  document.getElementById('tanggal').valueAsDate = new Date();
+  const btn = document.getElementById('btnSimpan');
+  btn.classList.add('sukses');
+  btn.textContent = 'Tersimpan! 🌟';
+  setTimeout(() => { btn.classList.remove('sukses'); gantiTab(tab); }, 900);
+  konfeti();
+  render();
+}
+
+function hapus(i) {
+  if (confirm('Hapus catatan ini?')) { data.splice(i, 1); simpan(); render(); }
+}
+
+function rp(n) { return 'Rp ' + n.toLocaleString('id-ID'); }
+
+function animasiAngka(el, target) {
+  const awal = +(el.dataset.nilai || 0);
+  if (awal === target) { el.textContent = rp(target); return; }
+  const mulai = performance.now(), durasi = 600;
+  function langkah(saat) {
+    const p = Math.min((saat - mulai) / durasi, 1);
+    const mudah = 1 - Math.pow(1 - p, 3);
+    el.textContent = rp(Math.round(awal + (target - awal) * mudah));
+    if (p < 1) requestAnimationFrame(langkah);
+  }
+  requestAnimationFrame(langkah);
+  el.dataset.nilai = target;
+}
+
+function lolosFilter(item) {
+  if (filter === 'bulan') return item.tanggal.slice(0,7) === new Date().toISOString().slice(0,7);
+  if (filter === 'anak') return item.jenis === 'keluar' && ['Kebutuhan Anak','Susu','Diaper','Kesehatan'].includes(item.kategori);
+  return true;
+}
+
+function render() {
+  const masuk = data.filter(x => x.jenis === 'masuk').reduce((a, x) => a + x.jumlah, 0);
+  const keluar = data.filter(x => x.jenis === 'keluar').reduce((a, x) => a + x.jumlah, 0);
+  const saldo = masuk - keluar;
+  const elSaldo = document.getElementById('saldo');
+  animasiAngka(elSaldo, saldo);
+  elSaldo.className = 'saldo ' + (saldo >= 0 ? 'positif' : 'negatif');
+  elSaldo.classList.remove('pop'); void elSaldo.offsetWidth; elSaldo.classList.add('pop');
+  animasiAngka(document.getElementById('totMasuk'), masuk);
+  animasiAngka(document.getElementById('totKeluar'), keluar);
+
+  const tampil = data.filter(lolosFilter);
+  document.getElementById('daftar').innerHTML = tampil.length === 0
+    ? '<div class="kosong"><span class="maskot">🦋</span>Belum ada catatan</div>'
+    : tampil.map((x, i) => `
+      <li style="animation-delay:${Math.min(i * .05, .4)}s">
+        <div class="info">
+          <b>${x.kategori}</b>${x.ket ? ' - ' + x.ket : ''}
+          <small>${x.tanggal.split('-').reverse().join('/')}</small>
+        </div>
+        <div class="aksi">
+          <span class="nilai ${x.jenis === 'masuk' ? 'masuk' : 'keluar'}">
+            ${x.jenis === 'masuk' ? '+' : '-'}${rp(x.jumlah)}
+          </span>
+          <button class="hapus" onclick="hapus(${data.indexOf(x)})">×</button>
+        </div>
+      </li>`).join('');
+}
+
+document.getElementById('tanggal').valueAsDate = new Date();
+gantiTab('keluar');
+render();
+</script>
+</body>
+</html>
